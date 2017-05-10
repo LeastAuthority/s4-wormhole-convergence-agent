@@ -7,7 +7,8 @@ import MagicWormholeClient (app)
 import qualified Network.WebSockets as WebSockets
 
 host :: String
-host = "relay.magic-wormhole.io"
+host = "localhost"
+-- host = "relay.magic-wormhole.io"
 
 port :: Int
 port = 4000
