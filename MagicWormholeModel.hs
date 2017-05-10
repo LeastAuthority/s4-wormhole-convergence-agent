@@ -15,7 +15,7 @@ import Data.Aeson (
 
 data Message =
   Welcome { server_tx :: Double } |
-  Ack { server_tx :: Double, id :: Text } |
+  Ack { server_tx :: Double, id :: Maybe Text } |
   Bind { appid :: Text, side :: Text } |
   List |
   Nameplates { nameplates :: [Text] } |

@@ -24,7 +24,8 @@ runTest =
   let
     cases = [
       Welcome 123.456,
-      Ack 456.789 "abc123",
+      Ack 456.789 $ Just "abc123",
+      Ack 123.456 Nothing,
       Bind "example.com" "client",
       List,
       Nameplates ["123-nameplate", "456-nameplate"],
