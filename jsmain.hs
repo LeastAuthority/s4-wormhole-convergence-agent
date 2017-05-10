@@ -13,7 +13,7 @@ import Data.Text.Lazy.IO (putStr)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 
 
-import Data.Aeson (Value(Null), encode, decode)
+import Data.Aeson (Value(Null, Number), encode, decode)
 
 main = do
   putStr runTest
@@ -40,6 +40,7 @@ runTest =
       Close "happy" ,
       Closed,
       Error "message" Null,
+      Error "message" $ Number 10,
       Ping 123,
       Pong 456
       ]

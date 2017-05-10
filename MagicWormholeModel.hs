@@ -29,6 +29,9 @@ data Message =
   Letter { side :: Text, body :: Text, messageID :: Text } |
   Close { mood :: Text } |
   Closed |
+  -- XXX Something is wrong with the `original` field.  It doesn't seem to
+  -- want to decode and I can't seem to figure out how to construct a test to
+  -- exercise this case.
   Error { message :: Text, original :: Value } |
   Ping { ping :: Int } |
   Pong { pong :: Int } deriving (Eq, Generic, Show)
