@@ -20,7 +20,7 @@ sendMessage message conn = do
     WebSockets.sendTextData conn $ encode message
     response <- WebSockets.receiveData conn
     let
-      ack = maybe (fail "oh no!") $ return $ (decode response)
+      ack = maybe (fail "oh no!") return (decode response)
     liftIO $ T.putStrLn (ack :: Model.Message)
     return ()
 
