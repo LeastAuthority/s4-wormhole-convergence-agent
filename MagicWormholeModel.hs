@@ -27,7 +27,7 @@ instance FromJSON Message where
       "welcome"     -> Welcome <$> v .: "server_tx"
       "ack"         -> Ack     <$> v .: "server_tx" <*> v .: "id"
       "bind"        -> Bind    <$> v .: "appid" <*> v .: "side"
-      "list"        -> List
+      "list"        -> pure List
       _             -> fail "unknown message type"
 
 
