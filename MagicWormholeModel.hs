@@ -18,7 +18,9 @@ data Message =
   Ack { server_tx :: Double, id :: Text } |
   Bind { appid :: Text, side :: Text } |
   List |
+  Nameplates { nameplates :: [Text] } |
   Allocate |
+  Allocated { nameplate :: Text } |
   Claim { nameplate :: Text } |
   Claimed { mailbox :: Text } |
   Release { nameplate :: Text } |
@@ -40,7 +42,9 @@ instance FromJSON Message where
       "ack"         -> Ack     <$> v .: "server_tx" <*> v .: "id"
       "bind"        -> Bind    <$> v .: "appid" <*> v .: "side"
       "list"        -> pure List
+      "nameplates"  -> Nameplates <$> v .: "nameplates"
       "allocate"    -> pure Allocate
+      "allocated"   -> Allocated <$> v .: "nameplate"
       "claim"       -> Claim   <$> v .: "nameplate"
       "claimed"     -> Claimed <$> v .: "mailbox"
       "release"     -> Release <$> v .: "nameplate"
@@ -64,8 +68,12 @@ instance ToJSON Message where
     object ["type" .= ("bind" :: Text), "appid" .= appid, "side" .= side]
   toJSON List =
     object ["type" .= ("list" :: Text)]
+  toJSON (Nameplates nameplates) =
+    object ["type" .= ("nameplates" :: Text), "nameplates" .= nameplates]
   toJSON Allocate =
     object ["type" .= ("allocate" :: Text)]
+  toJSON (Allocated nameplate) =
+    object ["type" .= ("allocated" :: Text), "nameplate" .= nameplate]
   toJSON (Claim nameplate) =
     object ["type" .= ("claim" :: Text), "nameplate" .= nameplate]
   toJSON (Claimed mailbox) =
