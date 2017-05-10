@@ -16,8 +16,20 @@ import Data.Aeson (
 data Message =
   Welcome { server_tx :: Double } |
   Ack { server_tx :: Double, id :: Text } |
-  Bind { appid :: String, side :: String } |
-  List deriving (Eq, Generic, Show)
+  Bind { appid :: Text, side :: Text } |
+  List |
+  Allocate |
+  Claim { nameplate :: Text } |
+  Claimed { mailbox :: Text } |
+  Release { nameplate :: Text } |
+  Released |
+  Open { mailbox :: Text } |
+  Letter { side :: Text, body :: Text, messageID :: Text } |
+  Close { mood :: Text } |
+  Closed |
+  Error { message :: Text, original :: Value } |
+  Ping { ping :: Int } |
+  Pong { pong :: Int } deriving (Eq, Generic, Show)
 
 
 instance FromJSON Message where
@@ -28,6 +40,18 @@ instance FromJSON Message where
       "ack"         -> Ack     <$> v .: "server_tx" <*> v .: "id"
       "bind"        -> Bind    <$> v .: "appid" <*> v .: "side"
       "list"        -> pure List
+      "allocate"    -> pure Allocate
+      "claim"       -> Claim   <$> v .: "nameplate"
+      "claimed"     -> Claimed <$> v .: "mailbox"
+      "release"     -> Release <$> v .: "nameplate"
+      "released"    -> pure Released
+      "open"        -> Open    <$> v .: "mailbox"
+      "message"     -> Letter  <$> v .: "side" <*> v .: "body" <*> v .: "msg_id"
+      "close"       -> Close   <$> v .: "mood"
+      "closed"      -> pure Closed
+      "error"       -> Error   <$> v .: "message" <*> v .: "orig"
+      "ping"        -> Ping    <$> v .: "ping"
+      "pong"        -> Pong    <$> v .: "pong"
       _             -> fail "unknown message type"
 
 
@@ -40,3 +64,27 @@ instance ToJSON Message where
     object ["type" .= ("bind" :: Text), "appid" .= appid, "side" .= side]
   toJSON List =
     object ["type" .= ("list" :: Text)]
+  toJSON Allocate =
+    object ["type" .= ("allocate" :: Text)]
+  toJSON (Claim nameplate) =
+    object ["type" .= ("claim" :: Text), "nameplate" .= nameplate]
+  toJSON (Claimed mailbox) =
+    object ["type" .= ("claimed" :: Text), "mailbox" .= mailbox]
+  toJSON (Release nameplate) =
+    object ["type" .= ("release" :: Text), "nameplate" .= nameplate]
+  toJSON Released =
+    object ["type" .= ("released" :: Text)]
+  toJSON (Open mailbox) =
+    object ["type" .= ("open" :: Text), "mailbox" .= mailbox]
+  toJSON (Letter side body messageID) =
+    object ["type" .= ("message" :: Text), "side" .= side, "body" .= body, "msg_id" .= messageID]
+  toJSON (Close mood) =
+    object ["type" .= ("close" :: Text), "mood" .= mood]
+  toJSON Closed =
+    object ["type" .= ("closed" :: Text)]
+  toJSON (Error message original) =
+    object ["type" .= ("error" :: Text), "message" .= message, "orig" .= original]
+  toJSON (Ping ping) =
+    object ["type" .= ("ping" :: Text), "ping" .= ping]
+  toJSON (Pong pong) =
+    object ["type" .= ("pong" :: Text), "pong" .= pong]

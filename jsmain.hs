@@ -4,7 +4,7 @@ module Main (main) where
 
 import Prelude hiding (putStr, concat)
 
-import MagicWormholeModel (Message(Welcome, Ack, Bind, List))
+import MagicWormholeModel (Message(..))
 
 import Data.List (intersperse)
 
@@ -13,7 +13,7 @@ import Data.Text.Lazy.IO (putStr)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 
 
-import Data.Aeson (encode, decode)
+import Data.Aeson (Value(Null), encode, decode)
 
 main = do
   putStr runTest
@@ -24,9 +24,21 @@ runTest =
   let
     cases = [
       Welcome 123.456,
-      Ack 456.789 ("abc123" :: Text),
+      Ack 456.789 "abc123",
       Bind "example.com" "client",
-      List
+      List,
+      Allocate,
+      Claim "123-nameplate",
+      Claimed "abc-mailbox",
+      Release "123-nameplate",
+      Released,
+      Open"abc-mailbox",
+      Letter "client" "body" "message id",
+      Close "happy" ,
+      Closed,
+      Error "message" Null,
+      Ping 123,
+      Pong 456
       ]
     results = map roundtrip cases
     newlines = intersperse "\n" results
