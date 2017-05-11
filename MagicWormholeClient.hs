@@ -36,27 +36,17 @@ import qualified MagicWormholeModel as Model
 --   nameplates <- WebSockets.receiveData conn
 --   liftIO $ T.putStrLn nameplates
 
-app :: WebSockets.ClientApp ()
-app conn = forever (
-  do
-    encodedMessage <- WebSockets.receiveData conn
-    case (decode encodedMessage) :: Maybe Model.Message of
-      Nothing      -> do
-        print "decoding message failed"
-        print encodedMessage
-      Just message -> case message of
-        Model.Error message original -> do
-          print "Oh no an error"
-          print message
-          print original
-        Model.Welcome server_tx -> do
-          print "server says hi"
-          WebSockets.sendTextData conn $ encode $ Model.Bind "appid" "alice"
+send conn [] = conn
+send conn (m:ms) =
+  WebSockets.sendTextData conn $ encode m >>= (\conn -> send conn ms)
 
-        Model.Ack server_tx id -> do
-          print "server acked"
-          print id
-          WebSockets.sendTextData conn $ encode $ Model.List
 
-        Model.Nameplates nameplates -> print nameplates
-  )
+execute :: (State, [Model.Message]) -> WebSockets.ClientApp ()
+execute (state, messages) conn = do
+  send conn messages
+  encodedMessage <- WebSockets.receiveData conn
+  case (decode encodedMessage) :: Maybe Model.Message of
+    Nothing      -> do
+      print "decoding message failed"
+      print encodedMessage
+    Just message -> execute $ processMessage state message $ conn

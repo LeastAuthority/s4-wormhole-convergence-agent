@@ -2,7 +2,7 @@ module Main (main) where
 
 import Network.Socket (withSocketsDo)
 
-import MagicWormholeClient (app)
+import MagicWormholeClient (listNameplates)
 
 import qualified Network.WebSockets as WebSockets
 
@@ -14,4 +14,4 @@ port :: Int
 port = 4000
 
 main :: IO ()
-main = withSocketsDo $ WebSockets.runClient host port "/v1" app
+main = withSocketsDo $ WebSockets.runClient host port "/v1" listNameplates
