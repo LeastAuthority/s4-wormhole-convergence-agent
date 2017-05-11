@@ -8,3 +8,4 @@ futures = "0.1.13"
 hyper = { git = "https://github.com/hyperium/hyper.git", branch = "master" }
 tokio-core = "0.1.4"
 pretty_env_logger = "0.1.0"
+ws = "0.7.1"
