@@ -2,7 +2,7 @@ module Main (main) where
 
 import Network.Socket (withSocketsDo)
 
-import MagicWormholeClient (listNameplates)
+import ListNameplates (listNameplates)
 
 import qualified Network.WebSockets as WebSockets
 
