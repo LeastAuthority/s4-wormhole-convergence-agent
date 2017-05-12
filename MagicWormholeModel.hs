@@ -5,6 +5,8 @@ module MagicWormholeModel where
 import GHC.Generics (Generic)
 
 import Data.Text.Lazy (Text)
+import Data.Text.Lazy.Encoding (decodeUtf8)
+import Data.ByteString.Lazy (ByteString)
 
 import Data.Aeson (
   Value(Object), ToJSON(..), FromJSON(..),
@@ -28,7 +30,7 @@ data Message =
   Release { nameplate :: Text } |
   Released |
   Open { mailbox :: Text } |
-  Letter { side :: Text, body :: Text, messageID :: Text } |
+  Letter { side :: Text, phase :: Text, body :: Text, server_rx :: Double, server_tx :: Double, messageID :: Text } |
   Close { mood :: Text } |
   Closed |
   -- XXX Something is wrong with the `original` field.  It doesn't seem to
@@ -38,7 +40,8 @@ data Message =
   Ping { ping :: Int } |
   Pong { pong :: Int } |
   -- This one is different.  We get this if decoding fails.
-  UndecodableMessage deriving (Eq, Generic, Show)
+  UndecodableMessage { raw :: ByteString }
+  deriving (Eq, Generic, Show)
 
 
 instance FromJSON Message where
@@ -49,7 +52,7 @@ instance FromJSON Message where
       "ack"         -> Ack     <$> v .: "server_tx" <*> v .: "id"
       "bind"        -> Bind    <$> v .: "appid" <*> v .: "side"
       "list"        -> pure List
-      "nameplates"  -> Nameplates <$> v .: "nameplates"
+      "nameplates"  -> Nameplates <$> (v .: "nameplates" >>= mapM (\np -> np .: "id"))
       "allocate"    -> pure Allocate
       "allocated"   -> Allocated <$> v .: "nameplate"
       "claim"       -> Claim   <$> v .: "nameplate"
@@ -57,7 +60,14 @@ instance FromJSON Message where
       "release"     -> Release <$> v .: "nameplate"
       "released"    -> pure Released
       "open"        -> Open    <$> v .: "mailbox"
-      "message"     -> Letter  <$> v .: "side" <*> v .: "body" <*> v .: "msg_id"
+      "message"     ->
+        Letter
+        <$> v .: "side"
+        <*> v .: "phase"
+        <*> v .: "body"
+        <*> v .: "server_rx"
+        <*> v .: "server_tx"
+        <*> v .: "id"
       "close"       -> Close   <$> v .: "mood"
       "closed"      -> pure Closed
       "error"       -> Error   <$> v .: "message" <*> v .: "orig"
@@ -65,6 +75,9 @@ instance FromJSON Message where
       "pong"        -> Pong    <$> v .: "pong"
       _             -> fail "unknown message type"
 
+
+nameplateToJSON nameplate = object ["id" .= nameplate]
+nameplatesToJSON = map nameplateToJSON
 
 instance ToJSON Message where
   toJSON (Welcome server_tx) =
@@ -76,7 +89,7 @@ instance ToJSON Message where
   toJSON List =
     object ["type" .= ("list" :: Text)]
   toJSON (Nameplates nameplates) =
-    object ["type" .= ("nameplates" :: Text), "nameplates" .= nameplates]
+    object ["type" .= ("nameplates" :: Text), "nameplates" .= (nameplatesToJSON nameplates)]
   toJSON Allocate =
     object ["type" .= ("allocate" :: Text)]
   toJSON (Allocated nameplate) =
@@ -91,8 +104,16 @@ instance ToJSON Message where
     object ["type" .= ("released" :: Text)]
   toJSON (Open mailbox) =
     object ["type" .= ("open" :: Text), "mailbox" .= mailbox]
-  toJSON (Letter side body messageID) =
-    object ["type" .= ("message" :: Text), "side" .= side, "body" .= body, "msg_id" .= messageID]
+  toJSON (Letter side phase body server_rx server_tx messageID) =
+    object [
+      "type" .= ("message" :: Text)
+    , "phase" .= phase
+    , "side" .= side
+    , "body" .= body
+    , "server_rx" .= server_rx
+    , "server_tx" .= server_tx
+    , "id" .= messageID
+    ]
   toJSON (Close mood) =
     object ["type" .= ("close" :: Text), "mood" .= mood]
   toJSON Closed =
@@ -103,12 +124,14 @@ instance ToJSON Message where
     object ["type" .= ("ping" :: Text), "ping" .= ping]
   toJSON (Pong pong) =
     object ["type" .= ("pong" :: Text), "pong" .= pong]
+  toJSON (UndecodableMessage raw) =
+    object ["type" .= ("undecodable" :: Text), "raw" .= (decodeUtf8 raw)]
 
 
 decode' bytestring =
   case decode bytestring of
     Just msg -> msg
-    Nothing -> UndecodableMessage
+    Nothing -> UndecodableMessage bytestring
 
 instance WebSockets.WebSocketsData Message where
   fromDataMessage (WebSockets.Binary b) = decode' b

@@ -36,7 +36,7 @@ runTest =
       Release "123-nameplate",
       Released,
       Open"abc-mailbox",
-      Letter "client" "body" "message id",
+      Letter "client" "pake" "body" 123.456 456.789 "message id",
       Close "happy" ,
       Closed,
       Error "message" Null,
