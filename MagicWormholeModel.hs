@@ -9,9 +9,11 @@ import Data.Text.Lazy (Text)
 import Data.Aeson (
   Value(Object), ToJSON(..), FromJSON(..),
   genericToEncoding, defaultOptions, object, withObject,
+  encode, decode,
   (.=), (.:)
   )
 
+import qualified Network.WebSockets as WebSockets
 
 data Message =
   Welcome { server_tx :: Double } |
@@ -34,7 +36,9 @@ data Message =
   -- exercise this case.
   Error { message :: Text, original :: Value } |
   Ping { ping :: Int } |
-  Pong { pong :: Int } deriving (Eq, Generic, Show)
+  Pong { pong :: Int } |
+  -- This one is different.  We get this if decoding fails.
+  UndecodableMessage deriving (Eq, Generic, Show)
 
 
 instance FromJSON Message where
@@ -99,3 +103,15 @@ instance ToJSON Message where
     object ["type" .= ("ping" :: Text), "ping" .= ping]
   toJSON (Pong pong) =
     object ["type" .= ("pong" :: Text), "pong" .= pong]
+
+
+decode' bytestring =
+  case decode bytestring of
+    Just msg -> msg
+    Nothing -> UndecodableMessage
+
+instance WebSockets.WebSocketsData Message where
+  fromDataMessage (WebSockets.Binary b) = decode' b
+  fromDataMessage (WebSockets.Text b _) = decode' b
+  fromLazyByteString = decode'
+  toLazyByteString = encode
