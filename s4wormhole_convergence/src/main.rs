@@ -55,13 +55,15 @@ fn subscription_worker(uri: hyper::Uri, egress: SyncSender<String>, delay: Recei
     let client = Client::new(&handle);
 
     loop {
-        let work = client.get(uri).and_then(|res| {
-            println!("Response: {}", res.status());
-            println!("Headers: \n{}", res.headers());
-            res.body().for_each(|chunk| {
-                io::stdout().write_all(&chunk).map_err(From::from);
-                let _ = egress.send("hi".to_string()).unwrap();
-            });
+        let work = client.get(uri.clone()).then(|res| {
+            let response = res.unwrap();
+            println!("Response: {}", response.status());
+            println!("Headers: \n{}", response.headers());
+            return response.body().into_future();
+            // for_each(|chunk| {
+            //     io::stdout().write_all(&chunk).map_err(From::from);
+            //     let _ = egress.send("hi".to_string()).unwrap();
+            // });
         });
         core.run(work).unwrap();
         let _ = delay.recv();
