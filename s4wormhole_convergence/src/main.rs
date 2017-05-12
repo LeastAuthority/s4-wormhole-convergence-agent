@@ -73,8 +73,7 @@ fn subscription_worker(uri: hyper::Uri, egress: SyncSender<String>, delay: Recei
 
 fn fixed_intervals(interval: Duration) -> Receiver<()> {
     let (sender, receiver) = sync_channel(0);
-
-    Builder::new().name("timer".to_owned()).spawn(|| {
+    Builder::new().name("timer".to_owned()).spawn(move || {
         loop {
             sleep(interval);
             let _ = sender.send(()).unwrap();
