@@ -2,10 +2,13 @@
 
 module ListNameplates (listNameplates, showNameplates, expectAck) where
 
-import qualified Data.List as List
-import qualified Data.Text.Lazy as Text
-import qualified Data.Text.Lazy.IO as TextIO
-import qualified Data.ByteString.Lazy as ByteString
+import Prelude hiding (putStrLn, concat)
+
+import Control.Monad.Except (MonadError, throwError, catchError)
+
+import Data.List (intersperse)
+import Data.Text.Lazy (Text, concat, pack)
+import Data.Text.Lazy.IO (putStrLn)
 import Data.ByteString.Lazy.Char8 (unpack)
 
 import Data.Text.Lazy.Encoding (decodeUtf8)
@@ -18,34 +21,40 @@ import qualified MagicWormholeModel as Model
 
 data State = Done | Starting | Bound
 
+data WormholeError = UnexpectedMessage Model.Message deriving (Show, Eq)
+
+
+expectAck :: WebSockets.Connection -> IO (Either WormholeError Text)
 expectAck conn = do
   msg <- WebSockets.receiveData conn
   case (msg) of
-    Model.Ack server_tx id       -> putStrLn "Received ack..."
-    Model.UndecodableMessage raw -> putStrLn ("Received undecodable message:" ++ (unpack raw))
-    anything                 -> do
-      putStr "Received unexpected message: "
-      ByteString.putStr $ encode anything
-      ByteString.putStr "\n"
+    Model.Ack server_tx id -> pure $ Right "Received ack..."
+    anything               -> pure $ Left $ UnexpectedMessage msg
 
 
 showNameplates :: WebSockets.ClientApp ()
 showNameplates conn =
   listNameplates conn >>=
-  TextIO.putStrLn . Text.concat . List.intersperse " " . ("Nameplates: ":)
+  putStrLn . concat . intersperse " " . ("Nameplates: ":)
 
 
-listNameplates :: WebSockets.ClientApp [Text.Text]
+listNameplates :: WebSockets.ClientApp [Text]
 listNameplates conn = do
   msg <- WebSockets.receiveData conn
   case (msg) of
     Model.Welcome server_tx  -> do
       putStrLn "Received welcome..."
       WebSockets.sendBinaryData conn $ Model.Bind "appid" "server"
-      expectAck conn
+      ack <- expectAck conn
+      case (ack) of
+        Right status -> putStrLn status
+        Left err     -> putStrLn $ pack $ show err
 
       WebSockets.sendBinaryData conn Model.List
-      expectAck conn
+      ack <- expectAck conn
+      case (ack) of
+        Right status -> putStrLn status
+        Left err     -> putStrLn $ pack $ show err
 
       msg <- WebSockets.receiveData conn
       case (msg) of
