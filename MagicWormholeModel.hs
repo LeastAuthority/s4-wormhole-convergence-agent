@@ -10,37 +10,53 @@ import Data.ByteString.Lazy (ByteString)
 
 import Data.Aeson (
   Value(Object), ToJSON(..), FromJSON(..),
-  genericToEncoding, defaultOptions, object, withObject,
-  encode, decode,
+  object, encode, decode,
   (.=), (.:)
   )
 
 import qualified Network.WebSockets as WebSockets
 
 data Message =
-  Welcome { server_tx :: Double } |
-  Ack { server_tx :: Double, id :: Maybe Text } |
-  Bind { appid :: Text, side :: Text } |
+  -- server-transmission-time
+  Welcome Double |
+  -- server-transmission-time, message-id
+  Ack Double (Maybe Text) |
+  -- appid, side
+  Bind Text Text |
   List |
-  Nameplates { nameplates :: [Text] } |
+  -- nameplates
+  Nameplates [Text] |
   Allocate |
-  Allocated { nameplate :: Text } |
-  Claim { nameplate :: Text } |
-  Claimed { mailbox :: Text } |
-  Release { nameplate :: Text } |
+  -- nameplate
+  Allocated Text |
+  -- nameplate
+  Claim Text |
+  -- mailbox
+  Claimed Text |
+  -- nameplate
+  Release Text |
   Released |
-  Open { mailbox :: Text } |
-  Letter { side :: Text, phase :: Text, body :: Text, server_rx :: Double, server_tx :: Double, messageID :: Text } |
-  Close { mood :: Text } |
+  -- mailbox
+  Open Text |
+  -- side, phase, body, server_rx, server_tx, messageID
+  Letter Text Text Text Double Double Text |
+  -- phase, body
+  Add Text Text |
+  -- mood
+  Close Text |
   Closed |
   -- XXX Something is wrong with the `original` field.  It doesn't seem to
   -- want to decode and I can't seem to figure out how to construct a test to
   -- exercise this case.
-  Error { message :: Text, original :: Value } |
-  Ping { ping :: Int } |
-  Pong { pong :: Int } |
+  -- message, original
+  Error Text Value |
+  -- ping
+  Ping Int |
+  -- ping
+  Pong Int |
   -- This one is different.  We get this if decoding fails.
-  UndecodableMessage { raw :: ByteString }
+  -- raw
+  UndecodableMessage ByteString
   deriving (Eq, Generic, Show)
 
 
@@ -68,22 +84,27 @@ instance FromJSON Message where
         <*> v .: "server_rx"
         <*> v .: "server_tx"
         <*> v .: "id"
+      "add"         -> Add     <$> v .: "phase" <*> v .: "body"
       "close"       -> Close   <$> v .: "mood"
       "closed"      -> pure Closed
       "error"       -> Error   <$> v .: "message" <*> v .: "orig"
       "ping"        -> Ping    <$> v .: "ping"
       "pong"        -> Pong    <$> v .: "pong"
       _             -> fail "unknown message type"
+  parseJSON _ = fail "unknown message type"
 
 
+nameplateToJSON :: Text -> Value
 nameplateToJSON nameplate = object ["id" .= nameplate]
+
+nameplatesToJSON :: [Text] -> [Value]
 nameplatesToJSON = map nameplateToJSON
 
 instance ToJSON Message where
   toJSON (Welcome server_tx) =
     object ["type" .= ("welcome" :: Text), "server_tx" .= server_tx]
-  toJSON (Ack server_tx id) =
-    object ["type" .= ("ack" :: Text), "server_tx" .= server_tx, "id" .= id]
+  toJSON (Ack server_tx msgid) =
+    object ["type" .= ("ack" :: Text), "server_tx" .= server_tx, "id" .= msgid]
   toJSON (Bind appid side) =
     object ["type" .= ("bind" :: Text), "appid" .= appid, "side" .= side]
   toJSON List =
@@ -114,6 +135,12 @@ instance ToJSON Message where
     , "server_tx" .= server_tx
     , "id" .= messageID
     ]
+  toJSON (Add phase body) =
+    object [
+      "type" .= ("add" :: Text)
+    , "phase" .= phase
+    , "body" .= body
+    ]
   toJSON (Close mood) =
     object ["type" .= ("close" :: Text), "mood" .= mood]
   toJSON Closed =
@@ -128,6 +155,7 @@ instance ToJSON Message where
     object ["type" .= ("undecodable" :: Text), "raw" .= (decodeUtf8 raw)]
 
 
+decode' :: ByteString -> Message
 decode' bytestring =
   case decode bytestring of
     Just msg -> msg

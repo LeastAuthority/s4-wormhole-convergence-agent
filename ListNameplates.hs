@@ -6,31 +6,27 @@ import Prelude hiding (putStrLn, concat)
 
 import Data.List (intersperse)
 
-import Data.Text.Lazy (Text, concat, pack, append)
+import Data.Text.Lazy (Text, concat, append, pack)
 import Data.Text.Lazy.IO (putStrLn)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 
-import Data.ByteString.Lazy.Char8 (unpack)
-
-
-import Data.Aeson (encode, decode)
+import Data.Aeson (encode)
 
 import qualified Network.WebSockets as WebSockets
 
 import qualified MagicWormholeModel as Model
 
-data State = Done | Starting | Bound
-
 data WormholeError = UnexpectedMessage Model.Message
-                   | NoNameplates deriving (Show, Eq)
+                   | NoNameplates
+                   | CryptoFailure deriving (Show, Eq)
 
 
 expectAck :: WebSockets.Connection -> IO (Either WormholeError Text)
 expectAck conn = do
   msg <- WebSockets.receiveData conn
   case (msg) of
-    Model.Ack server_tx id -> pure $ Right "Received ack..."
-    anything               -> pure $ Left $ UnexpectedMessage msg
+    Model.Ack _ _ -> pure $ Right "Received ack..."
+    _             -> pure $ Left $ UnexpectedMessage msg
 
 
 
@@ -41,24 +37,26 @@ showNameplates appid side conn = do
   case nameplates of
     Left (UnexpectedMessage msg) ->
       putStrLn $ append "Unexpected wormhole message: " (decodeUtf8 $ encode msg)
-    Right nameplates             ->
-      putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplates)
+    Left anything                ->
+      putStrLn $ append "Failure: " (pack $ show anything)
+    Right nameplateNames         ->
+      putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplateNames)
 
 
 listNameplates :: Text -> Text -> WebSockets.ClientApp (Either WormholeError [Text])
 listNameplates appid side conn = do
-  msg <- WebSockets.receiveData conn
-  case (msg) of
-    Model.Welcome server_tx  -> do
+  welcomeMsg <- WebSockets.receiveData conn
+  case (welcomeMsg) of
+    Model.Welcome _  -> do
       WebSockets.sendBinaryData conn $ Model.Bind appid side
-      expectAck conn
+      _ <- expectAck conn
 
       WebSockets.sendBinaryData conn Model.List
-      expectAck conn
+      _ <- expectAck conn
 
-      msg <- WebSockets.receiveData conn
-      case (msg) of
+      nameplatesMsg <- WebSockets.receiveData conn
+      case (nameplatesMsg) of
         Model.Nameplates nameplates -> pure $ Right nameplates
-        anything                    -> pure $ Left (UnexpectedMessage msg)
+        _                           -> pure $ Left (UnexpectedMessage nameplatesMsg)
 
-    anything -> pure $ Left (UnexpectedMessage msg)
+    _ -> pure $ Left (UnexpectedMessage welcomeMsg)

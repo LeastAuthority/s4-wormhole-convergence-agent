@@ -1,4 +1,8 @@
-resolver: lts-8.9
-
+flags: {}
 packages:
-  - .
+- '.'
+extra-deps:
+- hkdf-0.0.1.1
+- saltine-0.0.0.4
+- websockets-0.11.1.0
+resolver: lts-8.9

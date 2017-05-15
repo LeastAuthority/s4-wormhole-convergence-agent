@@ -7,16 +7,21 @@ license: MIT
 github: LeastAuthority/s4-wormhole-convergence-agent
 category: Web
 
-ghc-options: -Wall -Werror
+ghc-options: "-Wall -Werror"
 
 dependencies:
-  - base >= 4.9 && < 5
+  - "base >= 4.9 && < 5"
+  - "aeson"
+  - "bytestring"
+  - "text"
+  - "websockets"
+  - "hkdf"
+  - "cryptohash"
+  - "saltine"
+  - "hex"
 
 executables:
   wsmain:
     main: wsmain.hs
-    dependencies:
-      - aeson
-      - bytestring
-      - text
-      - websockets
+  jsmain:
+    main: jsmain.hs

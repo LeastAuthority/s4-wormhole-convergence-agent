@@ -15,6 +15,7 @@ import Data.Text.Lazy.Encoding (decodeUtf8)
 
 import Data.Aeson (Value(Null, Number), encode, decode)
 
+main :: IO ()
 main = do
   putStr runTest
   putStr "\n"
@@ -37,6 +38,7 @@ runTest =
       Released,
       Open"abc-mailbox",
       Letter "client" "pake" "body" 123.456 456.789 "message id",
+      Add "version" "body",
       Close "happy" ,
       Closed,
       Error "message" Null,

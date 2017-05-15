@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.15.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -19,6 +19,21 @@ source-repository head
   type: git
   location: https://github.com/LeastAuthority/s4-wormhole-convergence-agent
 
+executable jsmain
+  main-is: jsmain.hs
+  ghc-options: -Wall -Werror
+  build-depends:
+      base >= 4.9 && < 5
+    , aeson
+    , bytestring
+    , text
+    , websockets
+    , hkdf
+    , cryptohash
+    , saltine
+    , hex
+  default-language: Haskell2010
+
 executable wsmain
   main-is: wsmain.hs
   ghc-options: -Wall -Werror
@@ -28,4 +43,8 @@ executable wsmain
     , bytestring
     , text
     , websockets
+    , hkdf
+    , cryptohash
+    , saltine
+    , hex
   default-language: Haskell2010
