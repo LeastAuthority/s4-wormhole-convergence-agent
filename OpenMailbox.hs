@@ -18,44 +18,36 @@ import qualified MagicWormholeModel as Model
 
 import ListNameplates (WormholeError(..), listNameplates, expectAck)
 
-openMailbox :: WebSockets.ClientApp ()
-openMailbox conn = do
-  nameplates <- listNameplates conn
-
-  case nameplates of
-    Left (UnexpectedMessage msg) -> putStrLn "Busted"
-    Right []                     -> putStrLn "No nameplates, giving up."
-    Right (nameplate:nameplates) -> do
-      putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplate:nameplates)
+claim :: Text -> WebSockets.ClientApp (Either WormholeError Text)
+claim nameplate conn = do
       WebSockets.sendBinaryData conn $ Model.Claim nameplate
-      ack <- expectAck conn
-      case (ack) of
-        Right status -> putStrLn status
-        Left err     -> putStrLn $ pack $ show err
+      expectAck conn
 
       msg <- WebSockets.receiveData conn
       case msg of
-        Model.Claimed mailbox -> do
-          WebSockets.sendBinaryData conn $ Model.Open mailbox
-          ack <- expectAck conn
-          case (ack) of
-            Right status -> putStrLn status
-            Left err     -> putStrLn $ pack $ show err
+        Model.Claimed mailbox -> pure $ Right mailbox
+        anything              -> pure $ Left (UnexpectedMessage msg)
 
-          msg <- WebSockets.receiveData conn
-          case msg of
-            Model.Letter side phase body server_rx server_tx messageID -> do
-              putStrLn side
-              putStrLn phase
-              putStrLn body
-              putStrLn messageID
 
-            anything                 -> do
-              putStr "Received unexpected message: "
-              ByteString.putStr $ encode anything
-              ByteString.putStr "\n"
+open :: Text -> WebSockets.ClientApp (Either WormholeError ())
+open mailbox conn = do
+  WebSockets.sendBinaryData conn $ Model.Open mailbox
+  ack <- expectAck conn
+  case ack of
+    Left anything -> pure $ Left anything
+    Right anything -> pure $ Right ()
 
-        anything                 -> do
-          putStr "Received unexpected message: "
-          ByteString.putStr $ encode anything
-          ByteString.putStr "\n"
+
+openMailbox :: Text -> Text -> WebSockets.ClientApp (Either WormholeError ())
+openMailbox appid side conn = do
+  nameplates <- listNameplates appid side conn
+
+  case nameplates of
+    Left anything                -> pure $ Left anything
+    Right []                     -> pure $ Left NoNameplates
+    Right (nameplate:nameplates) -> do
+      putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplate:nameplates)
+      mailbox <- claim nameplate conn
+      case mailbox of
+        Left anything -> pure $ Left anything
+        Right name    -> open name conn

@@ -21,7 +21,8 @@ import qualified MagicWormholeModel as Model
 
 data State = Done | Starting | Bound
 
-data WormholeError = UnexpectedMessage Model.Message deriving (Show, Eq)
+data WormholeError = UnexpectedMessage Model.Message
+                   | NoNameplates deriving (Show, Eq)
 
 
 expectAck :: WebSockets.Connection -> IO (Either WormholeError Text)
@@ -34,9 +35,9 @@ expectAck conn = do
 
 
 
-showNameplates :: WebSockets.ClientApp ()
-showNameplates conn = do
-  nameplates <- listNameplates conn
+showNameplates :: Text -> Text-> WebSockets.ClientApp ()
+showNameplates appid side conn = do
+  nameplates <- listNameplates appid side conn
   case nameplates of
     Left (UnexpectedMessage msg) ->
       putStrLn $ append "Unexpected wormhole message: " (decodeUtf8 $ encode msg)
@@ -44,12 +45,12 @@ showNameplates conn = do
       putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplates)
 
 
-listNameplates :: WebSockets.ClientApp (Either WormholeError [Text])
-listNameplates conn = do
+listNameplates :: Text -> Text -> WebSockets.ClientApp (Either WormholeError [Text])
+listNameplates appid side conn = do
   msg <- WebSockets.receiveData conn
   case (msg) of
     Model.Welcome server_tx  -> do
-      WebSockets.sendBinaryData conn $ Model.Bind "appid" "server"
+      WebSockets.sendBinaryData conn $ Model.Bind appid side
       expectAck conn
 
       WebSockets.sendBinaryData conn Model.List

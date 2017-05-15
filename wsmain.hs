@@ -2,8 +2,7 @@ module Main (main) where
 
 import Network.Socket (withSocketsDo)
 
-import ListNameplates (showNameplates)
-import OpenMailbox (openMailbox)
+import Receive (receiveApp)
 
 import qualified Network.WebSockets as WebSockets
 
@@ -14,8 +13,5 @@ host = "localhost"
 port :: Int
 port = 4000
 
--- main :: IO ()
--- main = withSocketsDo $ WebSockets.runClient host port "/v1" showNameplates
-
 main :: IO ()
-main = withSocketsDo $ WebSockets.runClient host port "/v1" openMailbox
+main = withSocketsDo $ WebSockets.runClient host port "/v1" receiveApp
