@@ -1,0 +1,31 @@
+-- This file has been generated from package.yaml by hpack version 0.15.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           s4-wormhole-convergence-agent
+version:        0.1.0
+synopsis:       The convergence agent for the magic-wormhole-enabled S4 signup process.
+description:    Please see README.md
+category:       Web
+homepage:       https://github.com/LeastAuthority/s4-wormhole-convergence-agent#readme
+bug-reports:    https://github.com/LeastAuthority/s4-wormhole-convergence-agent/issues
+maintainer:     Jean-Paul Calderone <exarkun@twistedmatrix.org>
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+source-repository head
+  type: git
+  location: https://github.com/LeastAuthority/s4-wormhole-convergence-agent
+
+executable wsmain
+  main-is: wsmain.hs
+  ghc-options: -Wall -Werror
+  build-depends:
+      base >= 4.9 && < 5
+    , aeson
+    , bytestring
+    , text
+    , websockets
+  default-language: Haskell2010

@@ -1,0 +1,22 @@
+name: s4-wormhole-convergence-agent
+version: 0.1.0
+synopsis: The convergence agent for the magic-wormhole-enabled S4 signup process.
+description: Please see README.md
+maintainer: Jean-Paul Calderone <exarkun@twistedmatrix.org>
+license: MIT
+github: LeastAuthority/s4-wormhole-convergence-agent
+category: Web
+
+ghc-options: -Wall -Werror
+
+dependencies:
+  - base >= 4.9 && < 5
+
+executables:
+  wsmain:
+    main: wsmain.hs
+    dependencies:
+      - aeson
+      - bytestring
+      - text
+      - websockets
