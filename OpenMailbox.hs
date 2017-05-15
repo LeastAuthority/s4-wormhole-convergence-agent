@@ -16,15 +16,16 @@ import qualified Network.WebSockets as WebSockets
 
 import qualified MagicWormholeModel as Model
 
-import ListNameplates (listNameplates, expectAck)
+import ListNameplates (WormholeError(..), listNameplates, expectAck)
 
 openMailbox :: WebSockets.ClientApp ()
 openMailbox conn = do
   nameplates <- listNameplates conn
 
   case nameplates of
-    []     -> putStrLn "No nameplates, giving up."
-    (nameplate:nameplates) -> do
+    Left (UnexpectedMessage msg) -> putStrLn "Busted"
+    Right []                     -> putStrLn "No nameplates, giving up."
+    Right (nameplate:nameplates) -> do
       putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplate:nameplates)
       WebSockets.sendBinaryData conn $ Model.Claim nameplate
       ack <- expectAck conn

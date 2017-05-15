@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ListNameplates (listNameplates, showNameplates, expectAck) where
+module ListNameplates (WormholeError(..), listNameplates, showNameplates, expectAck) where
 
 import Prelude hiding (putStrLn, concat)
 
-import Control.Monad.Except (MonadError, throwError, catchError)
-
 import Data.List (intersperse)
-import Data.Text.Lazy (Text, concat, pack)
+
+import Data.Text.Lazy (Text, concat, pack, append)
 import Data.Text.Lazy.IO (putStrLn)
+import Data.Text.Lazy.Encoding (decodeUtf8)
+
 import Data.ByteString.Lazy.Char8 (unpack)
 
-import Data.Text.Lazy.Encoding (decodeUtf8)
 
 import Data.Aeson (encode, decode)
 
@@ -32,43 +32,32 @@ expectAck conn = do
     anything               -> pure $ Left $ UnexpectedMessage msg
 
 
+
+
 showNameplates :: WebSockets.ClientApp ()
-showNameplates conn =
-  listNameplates conn >>=
-  putStrLn . concat . intersperse " " . ("Nameplates: ":)
+showNameplates conn = do
+  nameplates <- listNameplates conn
+  case nameplates of
+    Left (UnexpectedMessage msg) ->
+      putStrLn $ append "Unexpected wormhole message: " (decodeUtf8 $ encode msg)
+    Right nameplates             ->
+      putStrLn $ concat $ intersperse " " ("Nameplates: ":nameplates)
 
 
-listNameplates :: WebSockets.ClientApp [Text]
+listNameplates :: WebSockets.ClientApp (Either WormholeError [Text])
 listNameplates conn = do
   msg <- WebSockets.receiveData conn
   case (msg) of
     Model.Welcome server_tx  -> do
-      putStrLn "Received welcome..."
       WebSockets.sendBinaryData conn $ Model.Bind "appid" "server"
-      ack <- expectAck conn
-      case (ack) of
-        Right status -> putStrLn status
-        Left err     -> putStrLn $ pack $ show err
+      expectAck conn
 
       WebSockets.sendBinaryData conn Model.List
-      ack <- expectAck conn
-      case (ack) of
-        Right status -> putStrLn status
-        Left err     -> putStrLn $ pack $ show err
+      expectAck conn
 
       msg <- WebSockets.receiveData conn
       case (msg) of
-        Model.Nameplates nameplates  ->
-          pure nameplates
+        Model.Nameplates nameplates -> pure $ Right nameplates
+        anything                    -> pure $ Left (UnexpectedMessage msg)
 
-        Model.UndecodableMessage raw ->
-          pure ["Received undecodable message!", decodeUtf8 raw]
-
-        anything                    ->
-          pure ["Received unexpected message: ", decodeUtf8 $ encode anything, "\n"]
-
-    Model.UndecodableMessage raw ->
-      pure ["Received undecodable message!", decodeUtf8 raw]
-
-    anything                     ->
-      pure ["Received unexpected message: ", decodeUtf8 $ encode anything, "\n"]
+    anything -> pure $ Left (UnexpectedMessage msg)
