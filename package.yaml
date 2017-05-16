@@ -17,6 +17,7 @@ dependencies:
   - "websockets"
   - "hkdf"
   - "cryptohash"
+  - "cryptonite"
   - "saltine"
   - "hex"
 
