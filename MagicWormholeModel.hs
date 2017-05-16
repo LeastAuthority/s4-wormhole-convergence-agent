@@ -39,7 +39,7 @@ data Message =
   -- mailbox
   Open Text |
   -- side, phase, body, server_rx, server_tx, messageID
-  Letter Text Text Text Double Double Text |
+  Letter Text Text Text Double Double (Maybe Text) |
   -- phase, body
   Add Text Text |
   -- mood
