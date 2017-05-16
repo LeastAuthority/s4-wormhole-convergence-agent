@@ -4,15 +4,16 @@ module Receive (receiveApp) where
 
 import Prelude hiding (putStrLn, concat, init)
 
-import Data.Text.Lazy (Text, concat, pack)
+import Data.Text.Lazy (Text, concat)
 import Data.Text.Lazy.IO (putStrLn)
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
-import Data.ByteArray (ByteArrayAccess, convert)
+import Data.ByteArray (convert)
 
 import Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString as S
+import qualified Data.ByteString.Base16 as Base16 (encode)
 
 import Data.Hex (hex)
 
@@ -24,7 +25,7 @@ import Crypto.KDF.HKDF (PRK, expand, extract)
 import Crypto.Saltine.Class (decode)
 import Crypto.Saltine.Core.SecretBox (Key, Nonce, secretbox, newNonce)
 
-import Data.Aeson (encode)
+import qualified Data.Aeson as Aeson (encode)
 
 import Network.WebSockets (Connection, ClientApp, receiveData, sendBinaryData)
 
@@ -70,30 +71,48 @@ receive :: Text -> Text -> Text -> Connection -> IO (Either WormholeError ())
 receive appid side code conn = do
   _ <- openMailbox appid side conn
 
-  msg <- receiveData conn
-  case msg of
-    Model.Letter side phase body server_rx server_tx messageID -> do
+  first_msg <- receiveData conn
+  case first_msg of
+    Model.Letter _ _ _ _ _ _ -> do
       sendBinaryData conn $ Model.Add "bluhphase" $ (decodeUtf8 $ hex $ start appid code)
       _ <- expectAck conn
-      msg <- receiveData conn
-      case msg of
-        Model.Letter side phase body server_rx server_tx messageID ->
-          let
-            plaintext = ("{}" :: Text)
-            phase = ("version" :: Text)
-          in
-            do
-              let data_key = derive_phase_key (encodeUtf8 code) (finish body side) (encodeUtf8 phase)
-              case decode (toStrict data_key) of
-                Nothing -> pure $ Left CryptoFailure
-                Just k  -> do
-                  nonce <- newNonce
-                  let ciphertext = encrypt_data k nonce (encodeUtf8 plaintext)
-                  _ <- sendBinaryData conn $ Model.Add "version" (decodeUtf8 $ hex ciphertext)
-                  pure $ Right ()
+      key <- getVersion side code conn
+      case key of
+        Left anything      ->
+          pure $ Left anything
+
+        Right keyBytes     -> do
+          putStrLn $ decodeUtf8 $ fromStrict $ Base16.encode $ toStrict keyBytes
+          pure $ Right ()
 
     anything                 -> do
       pure $ Left (UnexpectedMessage anything)
+
+
+getVersion :: Text -> Text -> Connection -> IO (Either WormholeError ByteString)
+getVersion mySide code conn = do
+  msg <- receiveData conn
+  case msg of
+    Model.Letter theirSide _ body _ _ _ ->
+      if theirSide == mySide then
+        getVersion mySide code conn
+      else
+        let
+          plaintext = ("{}" :: Text)
+          phase = encodeUtf8 ("version" :: Text)
+          key = finish body theirSide
+          data_key = derive_phase_key (encodeUtf8 code) key phase
+        in
+          case decode (toStrict data_key) of
+            Nothing -> pure $ Left CryptoFailure
+            Just k  -> do
+              nonce <- newNonce
+              let ciphertext = encrypt_data k nonce (encodeUtf8 plaintext)
+              _ <- sendBinaryData conn $ Model.Add "version" (decodeUtf8 $ hex ciphertext)
+              pure $ Right key
+
+    anything -> pure $ Left (UnexpectedMessage anything)
+
 
 
 receiveApp :: ClientApp ()
@@ -101,8 +120,9 @@ receiveApp conn = do
   result <- receive "appid" "server" "code" conn
   case result of
     Left (UnexpectedMessage anything) ->
-      putStrLn $ concat ["Received unexpected message: ", decodeUtf8 $ encode anything, "\n"]
-    Left anything -> putStrLn "some other error"
-    Right anything ->
+      putStrLn $ concat ["Received unexpected message: ", decodeUtf8 $ Aeson.encode anything, "\n"]
+    Left _                            ->
+      putStrLn "some other error"
+    Right _                           ->
       putStrLn "Success"
   pure $ ()
