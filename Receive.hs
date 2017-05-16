@@ -29,7 +29,7 @@ import qualified Data.Aeson as Aeson (encode)
 
 import Network.WebSockets (Connection, ClientApp, receiveData, sendBinaryData)
 
-import SPAKE2 (start, finish)
+import SPAKE2 (finish)
 
 import qualified MagicWormholeModel as Model
 import ListNameplates (WormholeError(..), expectAck)
@@ -74,7 +74,7 @@ receive appid side code conn = do
   first_msg <- receiveData conn
   case first_msg of
     Model.Letter _ _ _ _ _ _ -> do
-      sendBinaryData conn $ Model.Add "bluhphase" $ (decodeUtf8 $ hex $ start appid code)
+      sendBinaryData conn $ Model.Add "pake" $ decodeUtf8 $ Aeson.encode $ Model.PAKE appid code
       _ <- expectAck conn
       key <- getVersion side code conn
       case key of

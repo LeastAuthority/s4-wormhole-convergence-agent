@@ -4,6 +4,8 @@ module MagicWormholeModel where
 
 import GHC.Generics (Generic)
 
+import Data.Hex (hex)
+
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.ByteString.Lazy (ByteString)
@@ -15,6 +17,8 @@ import Data.Aeson (
   )
 
 import qualified Network.WebSockets as WebSockets
+
+import SPAKE2 (start)
 
 data Message =
   -- server-transmission-time
@@ -166,3 +170,15 @@ instance WebSockets.WebSocketsData Message where
   fromDataMessage (WebSockets.Text b _) = decode' b
   fromLazyByteString = decode'
   toLazyByteString = encode
+
+data PAKE =
+  -- appid code
+  PAKE Text Text
+
+
+encodedPAKE :: PAKE -> Text
+encodedPAKE (PAKE appid code) = decodeUtf8 $ hex $ start appid code
+
+instance ToJSON PAKE where
+  toJSON pake =
+    object ["pake" .= encodedPAKE pake]
