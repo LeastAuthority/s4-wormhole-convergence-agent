@@ -16,6 +16,8 @@ import qualified Network.WebSockets as WebSockets
 
 import qualified MagicWormholeModel as Model
 
+import LoggingWebSockets (receiveData, sendBinaryData)
+
 data WormholeError = UnexpectedMessage Model.Message
                    | NoNameplates
                    | CryptoFailure deriving (Show, Eq)
@@ -23,7 +25,7 @@ data WormholeError = UnexpectedMessage Model.Message
 
 expectAck :: WebSockets.Connection -> IO (Either WormholeError Text)
 expectAck conn = do
-  msg <- WebSockets.receiveData conn
+  msg <- receiveData conn
   case (msg) of
     Model.Ack _ _ -> pure $ Right "Received ack..."
     _             -> pure $ Left $ UnexpectedMessage msg
@@ -45,16 +47,16 @@ showNameplates appid side conn = do
 
 listNameplates :: Text -> Text -> WebSockets.ClientApp (Either WormholeError [Text])
 listNameplates appid side conn = do
-  welcomeMsg <- WebSockets.receiveData conn
+  welcomeMsg <- receiveData conn
   case (welcomeMsg) of
     Model.Welcome _  -> do
-      WebSockets.sendBinaryData conn $ Model.Bind appid side
+      sendBinaryData conn $ Model.Bind appid side
       _ <- expectAck conn
 
-      WebSockets.sendBinaryData conn Model.List
+      sendBinaryData conn Model.List
       _ <- expectAck conn
 
-      nameplatesMsg <- WebSockets.receiveData conn
+      nameplatesMsg <- receiveData conn
       case (nameplatesMsg) of
         Model.Nameplates nameplates -> pure $ Right nameplates
         _                           -> pure $ Left (UnexpectedMessage nameplatesMsg)

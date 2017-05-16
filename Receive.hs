@@ -27,9 +27,11 @@ import Crypto.Saltine.Core.SecretBox (Key, Nonce, secretbox, newNonce)
 
 import qualified Data.Aeson as Aeson (encode)
 
-import Network.WebSockets (Connection, ClientApp, receiveData, sendBinaryData)
+import Network.WebSockets (Connection, ClientApp)
 
 import SPAKE2 (finish)
+
+import LoggingWebSockets (receiveData, sendBinaryData)
 
 import qualified MagicWormholeModel as Model
 import ListNameplates (WormholeError(..), expectAck)

@@ -13,14 +13,16 @@ import qualified Network.WebSockets as WebSockets
 
 import qualified MagicWormholeModel as Model
 
+import LoggingWebSockets (receiveData, sendBinaryData)
+
 import ListNameplates (WormholeError(..), listNameplates, expectAck)
 
 claim :: Text -> WebSockets.ClientApp (Either WormholeError Text)
 claim nameplate conn = do
-      WebSockets.sendBinaryData conn $ Model.Claim nameplate
+      sendBinaryData conn $ Model.Claim nameplate
       _ <- expectAck conn
 
-      msg <- WebSockets.receiveData conn
+      msg <- receiveData conn
       case msg of
         Model.Claimed mailbox -> pure $ Right mailbox
         _                     -> pure $ Left (UnexpectedMessage msg)
@@ -28,7 +30,7 @@ claim nameplate conn = do
 
 open :: Text -> WebSockets.ClientApp (Either WormholeError ())
 open mailbox conn = do
-  WebSockets.sendBinaryData conn $ Model.Open mailbox
+  sendBinaryData conn $ Model.Open mailbox
   ack <- expectAck conn
   case ack of
     Left anything -> pure $ Left anything
