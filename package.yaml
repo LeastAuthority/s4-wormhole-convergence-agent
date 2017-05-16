@@ -20,11 +20,13 @@ dependencies:
   - "memory"
   - "saltine"
   - "hex"
+  - "network"
+  - "base16-bytestring"
 
 executables:
   wsmain:
     main: wsmain.hs
-  # jsmain:
-  #   main: jsmain.hs
+  jsmain:
+    main: jsmain.hs
   # secretbox:
   #   main: nacl.hs

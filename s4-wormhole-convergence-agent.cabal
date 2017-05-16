@@ -19,6 +19,24 @@ source-repository head
   type: git
   location: https://github.com/LeastAuthority/s4-wormhole-convergence-agent
 
+executable jsmain
+  main-is: jsmain.hs
+  ghc-options: -Wall -Werror
+  build-depends:
+      base >= 4.9 && < 5
+    , aeson
+    , bytestring
+    , text
+    , websockets
+    , hkdf
+    , cryptonite
+    , memory
+    , saltine
+    , hex
+    , network
+    , base16-bytestring
+  default-language: Haskell2010
+
 executable wsmain
   main-is: wsmain.hs
   ghc-options: -Wall -Werror
@@ -33,4 +51,6 @@ executable wsmain
     , memory
     , saltine
     , hex
+    , network
+    , base16-bytestring
   default-language: Haskell2010
