@@ -4,49 +4,60 @@ module MagicWormholeClient where
 
 import Prelude hiding (id)
 
-import Control.Monad (forever)
-import Control.Monad.IO.Class (liftIO)
-
-import Data.Aeson (encode, decode)
-
-import Data.ByteString.Lazy (pack)
-import qualified Data.Text.IO as T
+import qualified Data.Text.Lazy as LazyT
 
 import qualified Network.WebSockets as WebSockets
 
 import qualified MagicWormholeModel as Model
 
--- sendMessage :: Model.Message -> WebSockets.ClientApp ()
--- sendMessage message conn = do
---   WebSockets.sendTextData conn $ encode message
---   response <- WebSockets.receiveData conn
---   let
---     ack = maybe (fail "oh no!") return (decode response)
---   liftIO $ T.putStrLn (ack :: Model.Message)
---   return ()
+import LoggingWebSockets (receiveData, sendBinaryData)
+
+data WormholeError = UnexpectedMessage Model.Message
+                   | CryptoFailure deriving (Show, Eq)
 
 
--- app :: WebSockets.ClientApp ()
--- app conn = do
---   welcome <- WebSockets.receiveData conn
---   liftIO $ T.putStrLn welcome
-
---   sendMessage (Model.Bind "foo" "bar") conn
---   sendMessage Model.List conn
---   nameplates <- WebSockets.receiveData conn
---   liftIO $ T.putStrLn nameplates
-
-send conn [] = conn
-send conn (m:ms) =
-  WebSockets.sendTextData conn $ encode m >>= (\conn -> send conn ms)
+expectAck :: WebSockets.Connection -> IO (Either WormholeError ())
+expectAck conn = do
+  msg <- receiveData conn
+  case (msg) of
+    Model.Ack _ _ -> pure $ Right ()
+    _             -> pure $ Left $ UnexpectedMessage msg
 
 
-execute :: (State, [Model.Message]) -> WebSockets.ClientApp ()
-execute (state, messages) conn = do
-  send conn messages
-  encodedMessage <- WebSockets.receiveData conn
-  case (decode encodedMessage) :: Maybe Model.Message of
-    Nothing      -> do
-      print "decoding message failed"
-      print encodedMessage
-    Just message -> execute $ processMessage state message $ conn
+claim :: LazyT.Text -> WebSockets.ClientApp (Either WormholeError LazyT.Text)
+claim nameplate conn = do
+      sendBinaryData conn $ Model.Claim nameplate (Just "c")
+      _ <- expectAck conn
+
+      msg <- receiveData conn
+      case msg of
+        Model.Claimed mailbox -> pure $ Right mailbox
+        _                     -> pure $ Left (UnexpectedMessage msg)
+
+
+open :: LazyT.Text -> WebSockets.ClientApp (Either WormholeError ())
+open mailbox conn = do
+  sendBinaryData conn $ Model.Open mailbox (Just "d")
+  ack <- expectAck conn
+  case ack of
+    Left anything -> pure $ Left anything
+    Right _       -> pure $ Right ()
+
+
+bind :: LazyT.Text -> LazyT.Text -> WebSockets.ClientApp (Either WormholeError ())
+bind appid side conn = do
+  sendBinaryData conn $ Model.Bind appid side (Just "a")
+  expectAck conn
+
+
+list :: WebSockets.ClientApp (Either WormholeError [LazyT.Text])
+list conn = do
+  sendBinaryData conn $ Model.List (Just "b")
+  _ <- expectAck conn
+
+  nameplatesMsg <- receiveData conn
+  case (nameplatesMsg) of
+    Model.Nameplates nameplates ->
+      pure $ Right nameplates
+    _                           ->
+      pure $ Left (UnexpectedMessage nameplatesMsg)

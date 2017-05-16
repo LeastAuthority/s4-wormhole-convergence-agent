@@ -6,5 +6,6 @@ import Data.ByteString.Lazy (ByteString, empty)
 start :: Text -> Text -> ByteString
 start _ _ = empty
 
-finish :: Text -> Text -> ByteString
+finish :: ByteString -> Text -> ByteString
+-- body side
 finish _ _ = empty
