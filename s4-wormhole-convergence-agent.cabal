@@ -29,8 +29,8 @@ executable wsmain
     , text
     , websockets
     , hkdf
-    , cryptohash
     , cryptonite
+    , memory
     , saltine
     , hex
   default-language: Haskell2010

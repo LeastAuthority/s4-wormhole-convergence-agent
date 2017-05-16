@@ -8,14 +8,18 @@ import Data.Text.Lazy (Text, concat, pack)
 import Data.Text.Lazy.IO (putStrLn)
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
+import Data.ByteArray (ByteArrayAccess, convert)
+
 import Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as S
 
 import Data.Hex (hex)
 
-import Crypto.Hash.SHA256 (init, hashlazy)
+import Crypto.Hash (Digest, hash)
+import Crypto.Hash.Algorithms (SHA256)
 
-import Crypto.KDF.HKDF (expand, extract)
+import Crypto.KDF.HKDF (PRK, expand, extract)
 
 import Crypto.Saltine.Class (decode)
 import Crypto.Saltine.Core.SecretBox (Key, Nonce, secretbox, newNonce)
@@ -30,16 +34,25 @@ import qualified MagicWormholeModel as Model
 import ListNameplates (WormholeError(..), expectAck)
 import OpenMailbox (openMailbox)
 
+
 sha256 :: ByteString -> ByteString
-sha256 = fromStrict . hashlazy
+sha256 b = fromStrict $ convert $ (hash (toStrict b) :: Digest SHA256)
+
 
 wormhole_purpose :: ByteString -> ByteString -> ByteString
 wormhole_purpose side phase =
   B.concat ["wormhole:phase:" :: ByteString, sha256 side, sha256 phase]
 
+
+prk :: ByteString -> PRK SHA256
+prk skm =
+  extract ("" :: S.ByteString) (toStrict skm)
+
+
 hkdf :: ByteString -> Int -> ByteString -> ByteString
 hkdf skm outlen ctxinfo =
-  expand (extract "" skm) ctxinfo outlen
+  fromStrict (expand (prk skm) (toStrict ctxinfo) outlen)
+
 
 derive_key :: ByteString -> ByteString -> ByteString
 derive_key key purpose =

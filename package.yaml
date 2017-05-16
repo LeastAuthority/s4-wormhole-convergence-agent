@@ -16,13 +16,15 @@ dependencies:
   - "text"
   - "websockets"
   - "hkdf"
-  - "cryptohash"
   - "cryptonite"
+  - "memory"
   - "saltine"
   - "hex"
 
 executables:
   wsmain:
     main: wsmain.hs
-  jsmain:
-    main: jsmain.hs
+  # jsmain:
+  #   main: jsmain.hs
+  # secretbox:
+  #   main: nacl.hs
