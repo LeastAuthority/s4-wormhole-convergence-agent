@@ -111,6 +111,8 @@ getVersion mySide code conn = do
               nonce <- newNonce
               let ciphertext = encrypt_data k nonce (encodeUtf8 plaintext)
               _ <- sendBinaryData conn $ Model.Add "version" (decodeUtf8 $ hex ciphertext)
+              _ <- expectAck conn
+
               pure $ Right key
 
     anything -> pure $ Left (UnexpectedMessage anything)
