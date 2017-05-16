@@ -76,8 +76,9 @@ receive appid side code conn = do
   first_msg <- receiveData conn
   case first_msg of
     Model.Letter _ _ _ _ _ _ -> do
-      sendBinaryData conn $ Model.Add "pake" $ decodeUtf8 $ Aeson.encode $ Model.PAKE appid code
-      _ <- expectAck conn
+      sendBinaryData conn $ Model.Add "pake" (decodeUtf8 $ Aeson.encode (Model.PAKE appid code)) (Just "e")
+      -- Get version will eat the Ack for the above Add message.  This kinda
+      -- sucks oh well.
       key <- getVersion side code conn
       case key of
         Left anything      ->
@@ -95,6 +96,8 @@ getVersion :: Text -> Text -> Connection -> IO (Either WormholeError ByteString)
 getVersion mySide code conn = do
   msg <- receiveData conn
   case msg of
+    Model.Ack _ _ ->
+      getVersion mySide code conn
     Model.Letter theirSide _ body _ _ _ ->
       if theirSide == mySide then
         getVersion mySide code conn
@@ -110,7 +113,7 @@ getVersion mySide code conn = do
             Just k  -> do
               nonce <- newNonce
               let ciphertext = encrypt_data k nonce (encodeUtf8 plaintext)
-              _ <- sendBinaryData conn $ Model.Add "version" (decodeUtf8 $ hex ciphertext)
+              _ <- sendBinaryData conn $ Model.Add "version" (decodeUtf8 $ hex ciphertext) (Just "f")
               _ <- expectAck conn
 
               pure $ Right key

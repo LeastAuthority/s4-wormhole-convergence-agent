@@ -19,7 +19,7 @@ import ListNameplates (WormholeError(..), listNameplates, expectAck)
 
 claim :: Text -> WebSockets.ClientApp (Either WormholeError Text)
 claim nameplate conn = do
-      sendBinaryData conn $ Model.Claim nameplate
+      sendBinaryData conn $ Model.Claim nameplate (Just "c")
       _ <- expectAck conn
 
       msg <- receiveData conn
@@ -30,7 +30,7 @@ claim nameplate conn = do
 
 open :: Text -> WebSockets.ClientApp (Either WormholeError ())
 open mailbox conn = do
-  sendBinaryData conn $ Model.Open mailbox
+  sendBinaryData conn $ Model.Open mailbox (Just "d")
   ack <- expectAck conn
   case ack of
     Left anything -> pure $ Left anything

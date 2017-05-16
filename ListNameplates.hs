@@ -50,15 +50,17 @@ listNameplates appid side conn = do
   welcomeMsg <- receiveData conn
   case (welcomeMsg) of
     Model.Welcome _  -> do
-      sendBinaryData conn $ Model.Bind appid side
+      sendBinaryData conn $ Model.Bind appid side (Just "a")
       _ <- expectAck conn
 
-      sendBinaryData conn Model.List
+      sendBinaryData conn $ Model.List (Just "b")
       _ <- expectAck conn
 
       nameplatesMsg <- receiveData conn
       case (nameplatesMsg) of
-        Model.Nameplates nameplates -> pure $ Right nameplates
-        _                           -> pure $ Left (UnexpectedMessage nameplatesMsg)
+        Model.Nameplates nameplates ->
+          pure $ Right nameplates
+        _                           ->
+          pure $ Left (UnexpectedMessage nameplatesMsg)
 
     _ -> pure $ Left (UnexpectedMessage welcomeMsg)
