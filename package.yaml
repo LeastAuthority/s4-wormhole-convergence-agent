@@ -22,6 +22,7 @@ dependencies:
   - "hex"
   - "network"
   - "base16-bytestring"
+  - "unix"
 
 executables:
   wsmain:

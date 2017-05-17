@@ -35,6 +35,7 @@ executable jsmain
     , hex
     , network
     , base16-bytestring
+    , unix
   default-language: Haskell2010
 
 executable wsmain
@@ -53,4 +54,5 @@ executable wsmain
     , hex
     , network
     , base16-bytestring
+    , unix
   default-language: Haskell2010

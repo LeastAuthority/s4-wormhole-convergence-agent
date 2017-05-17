@@ -213,9 +213,12 @@ processPake appid mySide code conn = do
 
 
 
-receiveApp :: ClientApp ()
-receiveApp conn = do
-  result <- receive "appid" "server" "code" conn
+receiveApp :: [Text] -> ClientApp ()
+receiveApp args conn = do
+  let appid = args !! 0
+  let side = args !! 1
+  let code = args !! 2
+  result <- receive appid side code conn
   case result of
     Left (Client.UnexpectedMessage anything) ->
       putStrLn $ concat ["Received unexpected message: ", decodeUtf8 $ Aeson.encode anything, "\n"]
